@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walt Disney World Master Itinerary & Rolling LL Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- True Vector PDF Generation Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    .crowd-low { background-color: #d1fae5; border-color: #10b981; color: #065f46; }
+    .crowd-mod { background-color: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .crowd-high { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+    .crowd-peak { background-color: #f3e8ff; border-color: #a855f7; color: #6b21a8; }
+
+    @media print {
+      @page { size: portrait; margin: 0.5in; }
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      #pdfExportContainer { border: none !important; box-shadow: none !important; padding: 0 !important; }
+      #itineraryOutput { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 1rem !important; }
+      .day-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 12px !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+
+  <!-- Header with Reference Castle Logo -->
+  <header class="bg-blue-900 text-white py-6 shadow-md no-print">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3.5">
+        <!-- Exact Vector Silhouette matching User Reference Image -->
+        <svg class="w-12 h-12 text-amber-300 shrink-0" viewBox="0 0 100 100" fill="currentColor">
+          <!-- Overarching Semi-Circle Arch -->
+          <path d="M 12 72 A 38 38 0 0 1 88 72" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <!-- Castle Silhouette Body with Horizontal Stripe Cutouts -->
+          <mask id="stripeMask">
+            <rect x="0" y="0" width="100" height="100" fill="white"/>
+            <rect x="0" y="45" width="100" height="3.5" fill="black"/>
+            <rect x="0" y="54" width="100" height="3.5" fill="black"/>
+            <rect x="0" y="63" width="100" height="3.5" fill="black"/>
+            <rect x="0" y="72" width="100" height="3.5" fill="black"/>
+            <rect x="0" y="81" width="100" height="3.5" fill="black"/>
+            <!-- Arched Gate Cutout -->
+            <path d="M 40 88 A 10 10 0 0 1 60 88 Z" fill="black"/>
+          </mask>
+          <g mask="url(#stripeMask)">
+            <!-- Base Walls -->
+            <rect x="22" y="72" width="56" height="18"/>
+            <!-- Side Towers -->
+            <polygon points="22,72 22,58 29,58 29,72"/>
+            <polygon points="71,72 71,58 78,58 78,72"/>
+            <!-- Turrets & Spires -->
+            <polygon points="18,58 25,44 32,58"/>
+            <polygon points="68,58 75,44 82,58"/>
+            <polygon points="32,65 37,50 42,65"/>
+            <polygon points="58,65 63,50 68,65"/>
+            <!-- Central Tall Spire -->
+            <rect x="44" y="32" width="12" height="36"/>
+            <polygon points="41,32 50,16 59,32"/>
+            <!-- Tiny Flags on Spires -->
+            <path d="M 50 16 L 50 11 L 55 13.5 L 50 16 Z"/>
+            <path d="M 25 44 L 25 41 L 29 42.5 L 25 44 Z"/>
+            <path d="M 75 44 L 75 41 L 79 42.5 L 75 44 Z"/>
+          </g>
+        </svg>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight">WDW Master Itinerary & Rolling LL Planner</h1>
+          <p class="text-blue-200 text-xs md:text-sm mt-0.5">Blank Canvas, Character Breakfast LL Engine, Rich-Text Sheets Copy & Card View</p>
+        </div>
+      </div>
+      <div class="flex gap-2 text-xs">
+        <span class="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold">Low (1-3)</span>
+        <span class="px-2.5 py-1 rounded bg-amber-100 text-amber-800 font-semibold">Moderate (4-6)</span>
+        <span class="px-2.5 py-1 rounded bg-red-100 text-red-800 font-semibold">High (7-8)</span>
+        <span class="px-2.5 py-1 rounded bg-purple-100 text-purple-800 font-semibold">Peak (9-10)</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+    
+    <!-- Top Section: Calendar & Configuration Controls -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 no-print">
+      
+      <!-- Left 2 Columns: Calendar & Day Inspector -->
+      <div class="lg:col-span-2 space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-slate-800">Crowd Calendar</h2>
+            <div class="flex gap-2">
+              <select id="monthSelect" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+                <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+                <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+                <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+              </select>
+              <select id="yearSelect" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="2026">2026</option><option value="2027">2027</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-500 mb-2">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+
+          <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+        </div>
+
+        <!-- Selected Day Recorded Waits Breakdown -->
+        <div id="dayDetails" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hidden">
+          <div class="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
+            <div>
+              <h3 id="selectedDateTitle" class="text-lg font-bold text-slate-800">Select a Date</h3>
+              <p id="selectedDateMeta" class="text-sm text-slate-500"></p>
+            </div>
+            <span id="selectedCrowdBadge" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+          </div>
+          <h4 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Recorded Headliner Wait Times (Peak Afternoon Avg)</h4>
+          <div id="waitTimesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: Trip Generator Controls -->
+      <div class="space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 class="text-xl font-bold text-slate-800 mb-2">Trip Planning Controls</h2>
+          <p class="text-xs text-slate-500 mb-4">Select your blank dates, resort, and touring track to build your custom plan.</p>
+          
+          <div class="space-y-3.5">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Start Date</label>
+                <input type="date" id="startDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">End Date</label>
+                <input type="date" id="endDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+            </div>
+
+            <!-- Specific Disney Resort Property Selector -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Specific Resort Property</label>
+              <select id="resortProperty" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" disabled selected>-- Select Your Disney Resort --</option>
+                <optgroup label="🦒 Animal Kingdom Area (Deluxe)">
+                  <option value="animal_kingdom_lodge">Disney's Animal Kingdom Lodge</option>
+                </optgroup>
+                <optgroup label="✨ Monorail Resorts (Deluxe)">
+                  <option value="polynesian">Disney's Polynesian Village Resort</option>
+                  <option value="contemporary">Disney's Contemporary Resort</option>
+                  <option value="grand_floridian">Disney's Grand Floridian Resort & Spa</option>
+                </optgroup>
+                <optgroup label="🚡 Skyliner Resorts">
+                  <option value="riviera">Disney's Riviera Resort</option>
+                  <option value="caribbean_beach">Disney's Caribbean Beach Resort</option>
+                  <option value="pop_century">Disney's Pop Century Resort</option>
+                  <option value="art_animation">Disney's Art of Animation Resort</option>
+                </optgroup>
+                <optgroup label="🚤 Epcot Resort Area (Deluxe)">
+                  <option value="boardwalk">Disney's BoardWalk Inn</option>
+                  <option value="yacht_beach">Disney's Yacht & Beach Club Resorts</option>
+                </optgroup>
+                <optgroup label="🌲 Wilderness & Springs Area">
+                  <option value="wilderness_lodge">Disney's Wilderness Lodge</option>
+                  <option value="saratoga_springs">Disney's Saratoga Springs Resort</option>
+                  <option value="old_key_west">Disney's Old Key West Resort</option>
+                  <option value="port_orleans">Disney's Port Orleans Resort</option>
+                </optgroup>
+                <optgroup label="⭐ Value & Moderate (Bus Transit)">
+                  <option value="coronado">Disney's Coronado Springs Resort</option>
+                  <option value="all_star">Disney's All-Star Resorts (Movies/Music/Sports)</option>
+                </optgroup>
+                <optgroup label="🏨 Off-Property / Non-Disney">
+                  <option value="offsite">Off-Property Hotel / Vacation Rental</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Touring Track Preference -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Default Morning Touring Track</label>
+              <select id="defaultTrack" class="w-full border border-indigo-300 bg-indigo-50/40 text-indigo-950 font-medium rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="trackA">Track A: Classic Headliner Rope Drop</option>
+                <option value="trackB" selected>Track B: Most Popular Rides First (Sell-Out Risk)</option>
+                <option value="trackC">Track C: Sleep In / No Early Access (Leisurely 10:00 AM Gate Arrival)</option>
+              </select>
+              <span class="text-[11px] text-slate-500 block mt-1">You can also toggle Tracks A, B, or C on each individual park day below!</span>
+            </div>
+
+            <!-- Character Breakfast Configuration -->
+            <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <label for="enableCharBreakfast" class="text-xs font-bold text-amber-900 cursor-pointer">Add Character Breakfast?</label>
+                <input type="checkbox" id="enableCharBreakfast" class="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500">
+              </div>
+              <div id="charBreakfastWrapper" style="display:none;" class="space-y-2 pt-1 border-t border-amber-200">
+                <div>
+                  <label class="block text-[11px] font-semibold text-amber-800 mb-1">Select Character Breakfast Location:</label>
+                  <select id="charBreakfastLoc" class="w-full border border-amber-300 rounded-md px-2 py-1.5 text-xs bg-white text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <option value="tusker">Tusker House Restaurant (Animal Kingdom - 8:00 AM)</option>
+                    <option value="topolino">Topolino's Terrace - Flavors of the Riviera (Riviera Resort - 8:15 AM)</option>
+                    <option value="crystal">The Crystal Palace (Magic Kingdom - 8:10 AM)</option>
+                    <option value="akershus">Akershus Royal Banquet Hall (EPCOT - 8:20 AM)</option>
+                    <option value="ohana">'Ohana Best Friends Breakfast (Polynesian - 8:00 AM)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-amber-800 mb-1">Schedule on which Trip Day?</label>
+                  <select id="charBreakfastDay" class="w-full border border-amber-300 rounded-md px-2 py-1 text-xs bg-white text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <option value="1">Day 1</option>
+                    <option value="2" selected>Day 2</option>
+                    <option value="3">Day 3</option>
+                    <option value="4">Day 4</option>
+                    <option value="5">Day 5</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lightning Lane Pass Type -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Lightning Lane Pass Strategy</label>
+              <select id="llPassType" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="multi_single" selected>Multi Pass (3 Initial + Rolling Rebooks) + Single Pass</option>
+                <option value="premier">Lightning Lane Premier Pass (All Rides, Walk-Up Any Time)</option>
+                <option value="none">Standby Only / Rope Drop Focus (No Paid Passes)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Dining Preference</label>
+              <select id="diningPref" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all">Balanced (Table & Quick Service)</option>
+                <option value="signature">Signature & Fine Dining</option>
+                <option value="character">Character & Family Dining</option>
+                <option value="quick">Quick Service & Snacks Focus</option>
+              </select>
+            </div>
+
+            <!-- Rest Days & Water Park -->
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <label for="includeResortDays" class="text-sm font-semibold text-slate-700 cursor-pointer">Include Rest Days? (Mid-Trip)</label>
+                <input type="checkbox" id="includeResortDays" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+              </div>
+              <div id="resortCountWrapper" style="display:none;" class="flex items-center justify-between pt-2 border-t border-slate-200">
+                <label for="resortDaysCount" class="text-xs font-medium text-slate-600">Number of Rest Days:</label>
+                <select id="resortDaysCount" class="border border-slate-300 rounded-md px-2.5 py-1 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="1" selected>1 Day</option>
+                  <option value="2">2 Days</option>
+                  <option value="3">3 Days</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+              <div>
+                <label for="includeWaterPark" class="text-sm font-semibold text-slate-700 block cursor-pointer">Include Water Park Day?</label>
+                <span class="text-[11px] text-slate-500">Typhoon Lagoon / Blizzard Beach (Mid-Trip)</span>
+              </div>
+              <input type="checkbox" id="includeWaterPark" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+            </div>
+
+            <button id="generateBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition shadow-sm text-sm">
+              Generate Master Itinerary
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Full-Width Section: All Planned Days & Export Options -->
+    <section id="pdfExportContainer" class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-5 mb-6">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Master Walt Disney World Itinerary</span>
+          <h2 id="itineraryHeaderTitle" class="text-2xl font-bold text-slate-800 mt-0.5">Your Complete Trip Itinerary</h2>
+          <p id="itinerarySummaryMeta" class="text-sm text-slate-500 mt-1">Select your dates and resort above to generate your plan.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 no-print">
+          <button id="exportCsvBtn" class="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3.5 py-2.5 rounded-lg transition shadow-sm text-sm">
+            📋 Copy for Google Sheets
+          </button>
+          <button id="exportPdfBtn" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-2.5 rounded-lg transition shadow-sm text-sm">
+            📄 Download Clean PDF
+          </button>
+          <button onclick="window.print()" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3.5 py-2.5 rounded-lg transition border border-slate-300 text-sm">
+            Print View
+          </button>
+        </div>
+      </div>
+
+      <!-- Full Grid of All Trip Days in Multi-Column Card Layout -->
+      <div id="itineraryOutput" class="text-center py-12 text-slate-400 font-medium">
+        Please select a Start Date, End Date, and Disney Resort above, then click "Generate Master Itinerary".
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let currentItineraryData = [];
+    let currentItineraryMeta = { title: "", subtitle: "" };
+    let dayTrackOverrides = {};
+
+    const CHARACTER_BREAKFASTS = {
+      tusker: { name: "Tusker House Restaurant (Animal Kingdom - 8:00 AM)", park: "Disney's Animal Kingdom", time: "08:00 AM", desc: "Donald's Safari Character Breakfast Buffet" },
+      topolino: { name: "Topolino's Terrace - Flavors of the Riviera (Riviera Resort - 8:15 AM)", park: "Any Park (Resort Breakfast)", time: "08:15 AM", desc: "Breakfast the Cinque Terre way with Mickey & Friends" },
+      crystal: { name: "The Crystal Palace (Magic Kingdom - 8:10 AM)", park: "Magic Kingdom", time: "08:10 AM", desc: "A Hundred Acre Wood Character Breakfast with Winnie the Pooh" },
+      akershus: { name: "Akershus Royal Banquet Hall (EPCOT - 8:20 AM)", park: "EPCOT", time: "08:20 AM", desc: "Princess Storybook Character Dining" },
+      ohana: { name: "'Ohana Best Friends Breakfast (Polynesian - 8:00 AM)", park: "Magic Kingdom / Monorail", time: "08:00 AM", desc: "Lilo & Stitch Character Breakfast Family Style" }
+    };
+
+    const RESORT_PROPERTIES = {
+      animal_kingdom_lodge: { name: "Disney's Animal Kingdom Lodge", area: "ak", bus: true, mkTransit: "Direct Disney Bus (25 mins)", epTransit: "Direct Disney Bus (20 mins)", hsTransit: "Direct Disney Bus (20 mins)", akTransit: "Direct Disney Bus (8 mins)" },
+      contemporary: { name: "Disney's Contemporary Resort", area: "monorail", bus: false, mkTransit: "Walkway (10 mins) or Resort Monorail", epTransit: "Monorail to TTC & Epcot Line (15 mins)", hsTransit: "Direct Disney Bus (20 mins)", akTransit: "Direct Disney Bus (25 mins)" },
+      polynesian: { name: "Disney's Polynesian Village Resort", area: "monorail", bus: false, mkTransit: "Resort Monorail (8 mins) or Water Taxi", epTransit: "Walk to TTC & Epcot Monorail (12 mins)", hsTransit: "Direct Disney Bus (20 mins)", akTransit: "Direct Disney Bus (25 mins)" },
+      grand_floridian: { name: "Disney's Grand Floridian Resort & Spa", area: "monorail", bus: false, mkTransit: "Walkway (10 mins) or Resort Monorail (4 mins)", epTransit: "Monorail to TTC & transfer (18 mins)", hsTransit: "Direct Disney Bus (20 mins)", akTransit: "Direct Disney Bus (25 mins)" },
+      riviera: { name: "Disney's Riviera Resort", area: "skyliner", bus: true, mkTransit: "Direct Disney Bus (25 mins)", epTransit: "Disney Skyliner Direct (10 mins to Int'l Gateway)", hsTransit: "Disney Skyliner via CBR Hub (15 mins)", akTransit: "Direct Disney Bus (20 mins)" },
+      caribbean_beach: { name: "Disney's Caribbean Beach Resort", area: "skyliner", bus: true, mkTransit: "Direct Disney Bus (25 mins)", epTransit: "Disney Skyliner Direct (12 mins)", hsTransit: "Disney Skyliner Direct (8 mins)", akTransit: "Direct Disney Bus (20 mins)" },
+      pop_century: { name: "Disney's Pop Century Resort", area: "skyliner", bus: true, mkTransit: "Direct Disney Bus (25 mins)", epTransit: "Disney Skyliner via CBR (15 mins)", hsTransit: "Disney Skyliner via CBR (12 mins)", akTransit: "Direct Disney Bus (20 mins)" },
+      art_animation: { name: "Disney's Art of Animation Resort", area: "skyliner", bus: true, mkTransit: "Direct Disney Bus (25 mins)", epTransit: "Disney Skyliner via CBR (15 mins)", hsTransit: "Disney Skyliner via CBR (12 mins)", akTransit: "Direct Disney Bus (20 mins)" },
+      boardwalk: { name: "Disney's BoardWalk Inn", area: "epcot", bus: true, mkTransit: "Direct Disney Bus (20 mins)", epTransit: "Walkway to Int'l Gateway (5 mins) or Boat", hsTransit: "Walkway (15 mins) or FriendShip Boat", akTransit: "Direct Disney Bus (20 mins)" },
+      yacht_beach: { name: "Disney's Yacht & Beach Club Resorts", area: "epcot", bus: true, mkTransit: "Direct Disney Bus (20 mins)", epTransit: "Walkway to Int'l Gateway (4 mins)", hsTransit: "FriendShip Boat or Walkway (15 mins)", akTransit: "Direct Disney Bus (20 mins)" },
+      wilderness_lodge: { name: "Disney's Wilderness Lodge", area: "wilderness", bus: true, mkTransit: "Red Flag Boat Launch (10 mins) or Bus (8 mins)", epTransit: "Direct Disney Bus (20 mins)", hsTransit: "Direct Disney Bus (20 mins)", akTransit: "Direct Disney Bus (25 mins)" },
+      saratoga_springs: { name: "Disney's Saratoga Springs Resort", area: "springs", bus: true, mkTransit: "Direct Disney Bus (22 mins)", epTransit: "Direct Disney Bus (15 mins)", hsTransit: "Direct Disney Bus (18 mins)", akTransit: "Direct Disney Bus (22 mins)" },
+      old_key_west: { name: "Disney's Old Key West Resort", area: "springs", bus: true, mkTransit: "Direct Disney Bus (22 mins)", epTransit: "Direct Disney Bus (15 mins)", hsTransit: "Direct Disney Bus (18 mins)", akTransit: "Direct Disney Bus (22 mins)" },
+      port_orleans: { name: "Disney's Port Orleans Resort", area: "springs", bus: true, mkTransit: "Direct Disney Bus (20 mins)", epTransit: "Direct Disney Bus (15 mins)", hsTransit: "Direct Disney Bus (18 mins)", akTransit: "Direct Disney Bus (22 mins)" },
+      coronado: { name: "Disney's Coronado Springs Resort", area: "moderate", bus: true, mkTransit: "Direct Disney Bus (22 mins)", epTransit: "Direct Disney Bus (15 mins)", hsTransit: "Direct Disney Bus (15 mins)", akTransit: "Direct Disney Bus (12 mins)" },
+      all_star: { name: "Disney's All-Star Resorts", area: "value", bus: true, mkTransit: "Direct Disney Bus (25 mins)", epTransit: "Direct Disney Bus (20 mins)", hsTransit: "Direct Disney Bus (18 mins)", akTransit: "Direct Disney Bus (12 mins)" },
+      offsite: { name: "Off-Property Hotel / Rental", area: "offsite", bus: false, mkTransit: "Drive to TTC + Monorail/Ferry (40 mins total)", epTransit: "Drive to EPCOT Main Gate (25 mins)", hsTransit: "Drive to DHS Main Gate (25 mins)", akTransit: "Drive to DAK Main Gate (25 mins)" }
+    };
+
+    const PARK_DATA = [
+      {
+        type: "park",
+        name: "Magic Kingdom",
+        icon: "🏰",
+        standardOpen: "9:00 AM",
+        earlyEntry: "8:30 AM",
+        headliners: [
+          { name: "TRON Lightcycle / Run", baseWait: 60, type: "LL Single Pass" },
+          { name: "Seven Dwarfs Mine Train", baseWait: 55, type: "LL Single Pass" },
+          { name: "Tiana's Bayou Adventure", baseWait: 50, type: "LL Multi Pass (Tier 1)" },
+          { name: "Big Thunder Mountain Railroad", baseWait: 40, type: "LL Multi Pass (Tier 1)" },
+          { name: "Peter Pan's Flight", baseWait: 45, type: "LL Multi Pass (Tier 1)" },
+          { name: "Haunted Mansion", baseWait: 35, type: "LL Multi Pass (Tier 2)" }
+        ],
+        tracks: {
+          trackA: {
+            label: "Track A: Classic Headliner Rope Drop",
+            summary: "Uses Early Entry to knock out E-ticket standby lines first, while pre-booking balanced Tier 1 and Tier 2 selections for late morning.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Tiana's Bayou Adventure (11:30a-12:30p)",
+              "Tier 2 Pre-Book #1: Haunted Mansion (12:30p-1:30p)",
+              "Tier 2 Pre-Book #2: Pirates of the Caribbean (1:30p-2:30p)",
+              "Single Pass (Optional): TRON Lightcycle / Run (7:30 PM night ride)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Tap HM -> Tier wall dissolves! Grab Big Thunder or Peter Pan.",
+              "2nd Rolling Pick (~1:45 PM): Book Jungle Cruise for 5:00 PM evening return."
+            ],
+            schedule: [
+              "07:15 AM — Depart Resort to arrive at MK Security/Tapstiles by 7:45 AM",
+              "08:30 AM — Early Entry: Walk straight to Seven Dwarfs Mine Train, then Space Mountain",
+              "09:20 AM — Tap into Haunted Mansion (LL #1) -> Book Rolling LL #4",
+              "10:15 AM — Tap into Tiana's Bayou Adventure (LL #2) -> Book Rolling LL #5 (Jungle Cruise 5:00 PM)",
+              "11:15 AM — Tap into Pirates of the Caribbean (LL #3) -> Book Rolling LL #6 (Buzz Lightyear)",
+              "12:00 PM — Lunch at Columbia Harbour House (upstairs quiet seating)",
+              "01:00 PM — Mid-Day Break: Return to Resort for pool, AC & nap",
+              "04:30 PM — Return to Magic Kingdom with stacked evening Lightning Lanes",
+              "05:15 PM — Redeem stacked LLs (Jungle Cruise, Peter Pan, Buzz Lightyear)",
+              "06:15 PM — Table Service Dinner (Skipper Canteen)",
+              "07:45 PM — Ride TRON Lightcycle / Run at night via Single Pass + Fireworks"
+            ]
+          },
+          trackB: {
+            label: "Track B: Most Popular Rides First (Sell-Out Risk)",
+            summary: "Prioritizes immediate capture of highest-demand capacity bottlenecks to eliminate sell-out risk.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Peter Pan's Flight & Tiana's Bayou Adventure (11:30a-1:30p)",
+              "Tier 2 Pre-Book #1: Buzz Lightyear's Space Ranger Spin (1:30p-2:30p)",
+              "Tier 2 Pre-Book #2: The Many Adventures of Winnie the Pooh (2:30p-3:30p)",
+              "Single Pass (Optional): Seven Dwarfs Mine Train or TRON"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Tap Peter Pan -> Tier wall drops! Book Space Mtn or Big Thunder.",
+              "2nd Rolling Pick (~1:45 PM): Book Jungle Cruise for 5:15 PM."
+            ],
+            schedule: [
+              "07:15 AM — Depart Resort to arrive at MK Tapstiles by 7:45 AM",
+              "08:30 AM — Early Entry (Fantasyland): Ride Under the Sea, then stage at West Fantasyland by 8:52 AM",
+              "09:00 AM — West-Side Rope Drop: Walk on Big Thunder Mountain & Haunted Mansion (Zero wait!)",
+              "09:50 AM — Walk onto Pirates of the Caribbean standby",
+              "10:25 AM — Cross to Fantasyland: Tap into Peter Pan's Flight (LL #1) -> Book Rolling LL #4",
+              "11:00 AM — Tap into Buzz Lightyear (LL #2) -> Book Rolling LL #5 (Jungle Cruise 5:15 PM)",
+              "11:45 AM — Tap into Winnie the Pooh (LL #3) -> Book Rolling LL #6 for evening",
+              "12:15 PM — Quick Service Lunch (Pecos Bill or Columbia Harbour House)",
+              "01:15 PM — Mid-Day Break: Return to Resort for pool & rest",
+              "04:45 PM — Return to Magic Kingdom for stacked evening Lightning Lanes",
+              "05:30 PM — Ride Jungle Cruise & Space Mountain / Tiana's + Dinner",
+              "08:00 PM — Nighttime TRON Single Pass & Fireworks on Main Street"
+            ]
+          },
+          trackC: {
+            label: "Track C: Sleep In / No Early Access (10:00 AM Gate Arrival)",
+            summary: "Relaxed morning with zero early alarms. Arrive at 10:00 AM after morning crowds peak, using Multi Pass and afternoon stacking.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Tiana's Bayou Adventure (11:30a-12:30p)",
+              "Tier 2 Pre-Book #1: Haunted Mansion (12:30p-1:30p)",
+              "Tier 2 Pre-Book #2: Pirates of the Caribbean (1:30p-2:30p)",
+              "Single Pass (Optional): TRON Lightcycle / Run (8:00 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Tap Haunted Mansion -> Book Big Thunder Mountain.",
+              "2nd Rolling Pick (~1:45 PM): Book Jungle Cruise for evening return."
+            ],
+            schedule: [
+              "08:30 AM — Sleep in, enjoy resort coffee & breakfast with zero rush",
+              "09:30 AM — Depart resort via Monorail / Bus to Magic Kingdom",
+              "10:00 AM — Arrive at MK Turnstiles (skip morning rope-drop bottleneck entirely)",
+              "10:30 AM — Stroll through Fantasyland & Tomorrowland (ride Carousel, PeopleMover)",
+              "11:30 AM — Tap into Tiana's Bayou Adventure (LL #1) -> Book Rolling LL #4",
+              "12:30 PM — Tap into Haunted Mansion (LL #2) -> Book Rolling LL #5",
+              "01:15 PM — Quick Service Lunch (Columbia Harbour House or Pecos Bill)",
+              "02:30 PM — Indoor attractions during peak heat (PhilharMagic, Pirates, Hall of Presidents)",
+              "05:00 PM — Table Service Dinner (Skipper Canteen)",
+              "07:00 PM — Use stacked LLs & TRON Single Pass + Fireworks"
+            ]
+          }
+        },
+        dining: {
+          all: { qs: "Columbia Harbour House", ts: "Jungle Navigation Co. LTD Skipper Canteen", snack: "Aloha Isle (Pineapple Dole Whip)" },
+          signature: { qs: "Gaston's Tavern", ts: "Cinderella's Royal Table or California Grill", snack: "Cheshire Cafe" },
+          character: { qs: "Cosmic Ray's Starlight Cafe", ts: "The Crystal Palace or Be Our Guest", snack: "Main Street Confectionery" },
+          quick: { qs: "Casey's Corner & Pecos Bill", ts: "Sleepy Hollow (Fresh Fruit Waffle)", snack: "Adventureland Spring Roll Cart" }
+        }
+      },
+      {
+        type: "park",
+        name: "EPCOT",
+        icon: "🌐",
+        standardOpen: "9:00 AM",
+        earlyEntry: "8:30 AM",
+        headliners: [
+          { name: "Guardians of the Galaxy: Cosmic Rewind", baseWait: 65, type: "LL Single Pass" },
+          { name: "Test Track", baseWait: 55, type: "LL Multi Pass (Tier 1)" },
+          { name: "Remy's Ratatouille Adventure", baseWait: 50, type: "LL Multi Pass (Tier 1)" },
+          { name: "Frozen Ever After", baseWait: 50, type: "LL Multi Pass (Tier 1)" },
+          { name: "Soarin' Around the World", baseWait: 30, type: "LL Multi Pass (Tier 2)" }
+        ],
+        tracks: {
+          trackA: {
+            label: "Track A: Classic Headliner Rope Drop",
+            summary: "Rope-drops Frozen Ever After during Early Entry and uses Tier 1 Multi Pass on Remy's Ratatouille Adventure.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Remy's Ratatouille Adventure (11:30a-12:30p)",
+              "Tier 2 Pre-Book #1: Spaceship Earth (12:30p-1:30p)",
+              "Tier 2 Pre-Book #2: Soarin' Around the World (1:30p-2:30p)",
+              "Single Pass: Guardians of the Galaxy: Cosmic Rewind (5:30 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Tap Spaceship Earth -> Book Test Track.",
+              "2nd Rolling Pick (~1:45 PM): Book Living with the Land."
+            ],
+            schedule: [
+              "07:15 AM — Depart Resort to reach EPCOT Main Gate by 7:45 AM",
+              "08:30 AM — Early Entry: Brisk walk to Frozen Ever After (Norway)",
+              "09:20 AM — Tap into Spaceship Earth (LL #1) -> Book Rolling LL #4",
+              "10:15 AM — Tap into Soarin' (LL #2) -> Book Rolling LL #5 (Living w/ Land)",
+              "11:15 AM — Walk to France: Tap into Remy's Ratatouille Adventure (LL #3)",
+              "12:00 PM — Lunch at Les Halles Boulangerie-Patisserie (France)",
+              "01:15 PM — Mid-Day Break: Return to Resort for pool & rest",
+              "04:45 PM — Return to EPCOT -> Guardians Single Pass & Test Track LL",
+              "06:45 PM — World Showcase Dinner (Via Napoli) & Luminous Fireworks at 9:00 PM"
+            ]
+          },
+          trackB: {
+            label: "Track B: Most Popular Rides First (Sell-Out Risk)",
+            summary: "Focuses on locking in Remy's Ratatouille Adventure and Frozen Ever After immediately as top-priority sell-out candidates.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Remy's & Frozen Ever After (11:30a-1:30p)",
+              "Tier 2 Pre-Book #1: Living with the Land (1:30p-2:30p)",
+              "Tier 2 Pre-Book #2: Spaceship Earth (2:30p-3:30p)",
+              "Single Pass: Guardians of the Galaxy: Cosmic Rewind"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Unlock Tier 1 and book Test Track.",
+              "2nd Rolling Pick (~1:45 PM): Book Soarin' Around the World."
+            ],
+            schedule: [
+              "07:15 AM — Depart Resort to arrive at EPCOT by 7:45 AM",
+              "08:30 AM — Early Entry: Head straight to Remy's, then walk to Frozen",
+              "09:45 AM — Tap into Living with the Land (LL #1) -> Book Rolling LL #4 (Test Track)",
+              "10:40 AM — Tap into Test Track (LL #2) -> Book Rolling LL #5",
+              "11:40 AM — Tap into Spaceship Earth (LL #3) & Lunch at Connections Eatery",
+              "01:00 PM — Mid-Day Break: Return to Resort for pool & relaxation",
+              "04:45 PM — Return to EPCOT -> Soarin' & Guardians Single Pass",
+              "06:45 PM — Dinner around World Showcase & 9:00 PM Nighttime Spectacular"
+            ]
+          },
+          trackC: {
+            label: "Track C: Sleep In / No Early Access (10:00 AM Gate Arrival)",
+            summary: "Leisurely morning arrival. Bypass morning turnstile queues and start touring World Celebration / Future World at 10:00 AM.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Remy's Ratatouille Adventure (11:30a-12:30p)",
+              "Tier 2 Pre-Book #1: Soarin' Around the World (12:30p-1:30p)",
+              "Tier 2 Pre-Book #2: Spaceship Earth (1:30p-2:30p)",
+              "Single Pass: Guardians of the Galaxy: Cosmic Rewind (7:00 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Book Test Track.",
+              "2nd Rolling Pick (~1:45 PM): Book Living with the Land."
+            ],
+            schedule: [
+              "08:30 AM — Sleep in, coffee at the resort",
+              "09:30 AM — Depart resort via Skyliner or Bus to EPCOT",
+              "10:00 AM — Arrive at EPCOT Main Gate / International Gateway",
+              "10:30 AM — Stroll Future World & ride Spaceship Earth / Mission: SPACE",
+              "11:30 AM — Tap into Remy's Ratatouille Adventure (LL #1) -> Book Rolling LL #4",
+              "12:30 PM — Tap into Soarin' (LL #2) -> Book Rolling LL #5",
+              "01:15 PM — Quick Service Lunch (Connections Eatery)",
+              "02:30 PM — Pavilion exploration & indoor shows (Awesome Planet, Nemo)",
+              "06:00 PM — Dinner in World Showcase (Mexico or Italy)",
+              "07:30 PM — Guardians Single Pass & 9:00 PM Fireworks"
+            ]
+          }
+        },
+        dining: {
+          all: { qs: "Les Halles Boulangerie-Patisserie (France)", ts: "Via Napoli Ristorante e Pizzeria (Italy)", snack: "Kringla Bakeri Og Kafe (School Bread)" },
+          signature: { qs: "Regal Eagle Smokehouse", ts: "Le Cellier Steakhouse or Space 220", snack: "L'Artisan des Glaces (Croque Glace)" },
+          character: { qs: "Sunshine Seasons", ts: "Garden Grill or Akershus Royal Banquet Hall", snack: "Karamell-Küche (Caramel Popcorn)" },
+          quick: { qs: "Connections Eatery & Festival Booths", ts: "La Cantina de San Angel (Mexico)", snack: "Festival Outdoor Kitchen Specialties" }
+        }
+      },
+      {
+        type: "park",
+        name: "Disney's Hollywood Studios",
+        icon: "🎬",
+        standardOpen: "9:00 AM",
+        earlyEntry: "8:30 AM",
+        headliners: [
+          { name: "Star Wars: Rise of the Resistance", baseWait: 65, type: "LL Single Pass" },
+          { name: "Slinky Dog Dash", baseWait: 65, type: "LL Multi Pass (Tier 1)" },
+          { name: "Rock 'n' Roller Coaster", baseWait: 45, type: "LL Multi Pass (Tier 1)" },
+          { name: "Millennium Falcon: Smugglers Run", baseWait: 45, type: "LL Multi Pass (Tier 1)" },
+          { name: "The Twilight Zone Tower of Terror", baseWait: 45, type: "LL Multi Pass (Tier 2)" },
+          { name: "Toy Story Mania!", baseWait: 35, type: "LL Multi Pass (Tier 2)" }
+        ],
+        tracks: {
+          trackA: {
+            label: "Track A: Classic Headliner Rope Drop",
+            summary: "Lock in Slinky Dog Dash as 7:00 AM Tier 1 Multi Pass, then use Early Entry to walk onto Tower of Terror & Rock 'n' Roller Coaster.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Slinky Dog Dash (1:00p-2:00p)",
+              "Tier 2 Pre-Book #1: Toy Story Mania! (11:30a-12:30p)",
+              "Tier 2 Pre-Book #2: The Twilight Zone Tower of Terror (12:30p-1:30p)",
+              "Single Pass: Star Wars: Rise of the Resistance (5:30 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~11:45 AM): Tap Toy Story Mania -> Book Runaway Railway.",
+              "2nd Rolling Pick (~1:45 PM): Book Rock 'n' Roller Coaster for evening."
+            ],
+            schedule: [
+              "07:15 AM — Depart Resort to arrive at DHS Turnstiles by 7:45 AM",
+              "08:30 AM — Early Entry: Walk straight down Sunset Blvd for Rock 'n' Roller Coaster & Tower of Terror",
+              "09:25 AM — Tap into Toy Story Mania! (LL #1) -> Book Rolling LL #4",
+              "10:35 AM — Tap into Tower of Terror (LL #2) -> Book Rolling LL #5 (Smugglers Run)",
+              "11:30 AM — Redeem Runaway Railway & Lunch at Woody's Lunch Box",
+              "01:00 PM — Mid-Day Break: Return to Resort for pool & rest",
+              "04:30 PM — Head back to Hollywood Studios",
+              "05:15 PM — Ride Smugglers Run & Rise of the Resistance (Single Pass)",
+              "06:30 PM — Dinner at Sci-Fi Dine-In Theater",
+              "07:45 PM — Ride Slinky Dog Dash at night & 8:30 PM Fantasmic!"
+            ]
+          },
+          trackB: {
+            label: "Track B: Most Popular Rides First (Sell-Out Risk)",
+            summary: "Zeroes in on Slinky Dog Dash and Rise of the Resistance as fastest-selling inventory to guarantee zero sell-out disappointment.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Slinky Dog Dash & Runaway Railway (11:30a-1:30p)",
+              "Tier 2 Pre-Book #1: Tower of Terror (1:30p-2:30p)",
+              "Tier 2 Pre-Book #2: Star Tours (2:30p-3:30p)",
+              "Single Pass: Star Wars: Rise of the Resistance"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Book Smugglers Run.",
+              "2nd Rolling Pick (~1:45 PM): Book Rock 'n' Roller Coaster."
+            ],
+            schedule: [
+              "07:15 AM — Depart Resort to arrive at DHS Turnstiles by 7:45 AM",
+              "08:30 AM — Early Entry: Brisk walk to Slinky Dog Dash, then Toy Story Mania!",
+              "09:40 AM — Tap into Runaway Railway (LL #1) -> Book Rolling LL #4",
+              "10:40 AM — Tap into Tower of Terror (LL #2) -> Book Rolling LL #5 (RNRC)",
+              "11:40 AM — Tap into Star Tours (LL #3) & Lunch at Docking Bay 7",
+              "01:00 PM — Mid-Day Break: Return to Resort for pool & rest",
+              "04:30 PM — Head back to Hollywood Studios",
+              "05:15 PM — Ride Smugglers Run, Rise of the Resistance & RNRC",
+              "06:45 PM — Table Service Dinner & 8:30 PM Fantasmic! Show"
+            ]
+          },
+          trackC: {
+            label: "Track C: Sleep In / No Early Access (10:00 AM Gate Arrival)",
+            summary: "Relaxed 10:00 AM arrival. Skip morning lines and use Multi Pass for afternoon and evening headliners.",
+            llPrebook: [
+              "Tier 1 Pre-Book: Slinky Dog Dash (1:00p-2:00p)",
+              "Tier 2 Pre-Book #1: Toy Story Mania! (11:30a-12:30p)",
+              "Tier 2 Pre-Book #2: Tower of Terror (12:30p-1:30p)",
+              "Single Pass: Star Wars: Rise of the Resistance (6:30 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~11:45 AM): Book Runaway Railway.",
+              "2nd Rolling Pick (~1:45 PM): Book Smugglers Run."
+            ],
+            schedule: [
+              "08:30 AM — Sleep in, coffee & breakfast at resort",
+              "09:30 AM — Depart resort via Skyliner or Bus to Hollywood Studios",
+              "10:00 AM — Arrive at DHS Turnstiles",
+              "10:30 AM — Stroll Hollywood Boulevard & Animation Courtyard",
+              "11:30 AM — Tap into Toy Story Mania! (LL #1) -> Book Rolling LL #4",
+              "12:30 PM — Tap into Tower of Terror (LL #2) -> Book Rolling LL #5",
+              "01:15 PM — Quick Service Lunch (Docking Bay 7 or Ronto Roasters)",
+              "02:30 PM — Indoor shows (Indiana Jones Epic Stunt Spectacular, Muppet*Vision)",
+              "05:30 PM — Table Service Dinner (Hollywood Brown Derby)",
+              "07:00 PM — Slinky Dog Dash & Rise of the Resistance Single Pass + Fantasmic!"
+            ]
+          }
+        },
+        dining: {
+          all: { qs: "Woody's Lunch Box (Totchos)", ts: "Sci-Fi Dine-In Theater Restaurant", snack: "Ronto Roasters (Ronto Wrap)" },
+          signature: { qs: "Docking Bay 7 Food and Cargo", ts: "The Hollywood Brown Derby (Cobb Salad)", snack: "BaseLine Tap House (Bavarian Pretzel)" },
+          character: { qs: "ABC Commissary", ts: "Hollywood & Vine or Roundup Rodeo BBQ", snack: "The Trolley Car Cafe (Carrot Cake Cookie)" },
+          quick: { qs: "Docking Bay 7 & Woody's Lunch Box", ts: "Oga's Cantina (Reservations)", snack: "Kat Saka's Kettle (Outpost Mix)" }
+        }
+      },
+      {
+        type: "park",
+        name: "Disney's Animal Kingdom",
+        icon: "🌳",
+        standardOpen: "8:00 AM",
+        earlyEntry: "7:30 AM",
+        headliners: [
+          { name: "Avatar Flight of Passage", baseWait: 65, type: "LL Single Pass" },
+          { name: "Na'vi River Journey", baseWait: 45, type: "LL Multi Pass (No Tiers)" },
+          { name: "Kilimanjaro Safaris", baseWait: 40, type: "LL Multi Pass (No Tiers)" },
+          { name: "Expedition Everest", baseWait: 30, type: "LL Multi Pass (No Tiers)" },
+          { name: "Kali River Rapids", baseWait: 25, type: "LL Multi Pass (No Tiers)" }
+        ],
+        tracks: {
+          trackA: {
+            label: "Track A: Classic Headliner Rope Drop",
+            summary: "Beats the stampede to Flight of Passage at 7:30 AM Early Entry, then uses non-tiered Multi Pass on Safaris, Na'vi River, and Everest.",
+            llPrebook: [
+              "Multi Pass #1: Na'vi River Journey (11:30a-12:30p)",
+              "Multi Pass #2: Kilimanjaro Safaris (12:30p-1:30p)",
+              "Multi Pass #3: Expedition Everest (1:30p-2:30p)",
+              "Single Pass (Optional): Avatar Flight of Passage (evening re-ride)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Book Kali River Rapids for afternoon.",
+              "2nd Rolling Pick (~1:45 PM): Book Festival of the Lion King."
+            ],
+            schedule: [
+              "06:30 AM — Depart Resort to arrive at DAK Turnstiles by 7:00 AM",
+              "07:30 AM — Early Entry: Walk straight to Avatar Flight of Passage",
+              "08:35 AM — Tap into Na'vi River Journey (LL #1) -> Book Rolling LL #4",
+              "09:30 AM — Tap into Kilimanjaro Safaris (LL #2) -> Book Rolling LL #5 (Lion King)",
+              "10:45 AM — Tap into Expedition Everest (LL #3) & walk Maharajah Trek",
+              "11:30 AM — Lunch at Satu'li Canteen + Ride Kali River Rapids",
+              "12:45 PM — Mid-Day Break: Return to Resort for pool & rest",
+              "04:00 PM — Return to Animal Kingdom",
+              "04:30 PM — Festival of the Lion King Show & Gorilla Falls Trail",
+              "05:45 PM — Dinner at Yak & Yeti Restaurant, then Pandora at dusk"
+            ]
+          },
+          trackB: {
+            label: "Track B: Most Popular Rides First (Sell-Out Risk)",
+            summary: "Prioritizes securing Flight of Passage Single Pass and locking down Safaris & Na'vi River before morning animal activity windows close.",
+            llPrebook: [
+              "Multi Pass #1: Kilimanjaro Safaris & Na'vi River Journey (11:30a-1:30p)",
+              "Multi Pass #2: Expedition Everest (1:30p-2:30p)",
+              "Multi Pass #3: Kali River Rapids (2:30p-3:30p)",
+              "Single Pass (Required for Track B): Avatar Flight of Passage (4:45 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~12:45 PM): Book Festival of the Lion King.",
+              "2nd Rolling Pick (~1:45 PM): Book Finding Nemo show."
+            ],
+            schedule: [
+              "07:00 AM — Depart Resort to arrive at DAK for 7:30 AM Early Entry",
+              "07:35 AM — Early Entry: Walk onto Expedition Everest twice in a row",
+              "08:20 AM — Tap into Kilimanjaro Safaris (LL #1) -> Book Rolling LL #4",
+              "09:35 AM — Tap into Na'vi River Journey (LL #2) -> Book Rolling LL #5",
+              "10:45 AM — Tap into Expedition Everest (LL #3) & Kali River Rapids",
+              "11:45 AM — Lunch at Flame Tree Barbecue or Satu'li Canteen",
+              "01:00 PM — Mid-Day Break: Return to Resort for pool & nap",
+              "04:15 PM — Return to Animal Kingdom",
+              "04:45 PM — Ride Avatar Flight of Passage via Single Pass",
+              "06:00 PM — Dinner at Tiffins / Nomad Lounge & Pandora stroll"
+            ]
+          },
+          trackC: {
+            label: "Track C: Sleep In / No Early Access (10:00 AM Gate Arrival)",
+            summary: "Relaxed 10:00 AM arrival. Skip early morning park queues and start touring Discovery Island and Pandora at 10:00 AM.",
+            llPrebook: [
+              "Multi Pass #1: Na'vi River Journey (11:00a-12:00p)",
+              "Multi Pass #2: Expedition Everest (12:00p-1:00p)",
+              "Multi Pass #3: Kilimanjaro Safaris (1:00p-2:00p)",
+              "Single Pass: Avatar Flight of Passage (5:00 PM)"
+            ],
+            llRolling: [
+              "1st Rolling Pick (~11:30 AM): Book Festival of the Lion King.",
+              "2nd Rolling Pick (~12:30 PM): Book Kali River Rapids."
+            ],
+            schedule: [
+              "08:30 AM — Sleep in, enjoy resort coffee & savanna views",
+              "09:15 AM — Depart resort via Bus to Animal Kingdom",
+              "10:00 AM — Arrive at DAK Turnstiles (bypass early morning crowd surge)",
+              "10:30 AM — Stroll Discovery Island Trails & meet characters",
+              "11:00 AM — Tap into Na'vi River Journey (LL #1) -> Book Rolling LL #4",
+              "12:00 PM — Lunch at Satu'li Canteen",
+              "01:00 PM — Mid-Day Break: Return to Resort for pool & relaxation",
+              "04:30 PM — Return to DAK for Avatar Flight of Passage Single Pass & Safaris",
+              "06:30 PM — Dinner at Yak & Yeti Restaurant & Pandora bioluminescence"
+            ]
+          }
+        },
+        dining: {
+          all: { qs: "Satu'li Canteen (Cheeseburger Pods)", ts: "Yak & Yeti Restaurant", snack: "Nomad Lounge (Tiffins Bread Service & Churros)" },
+          signature: { qs: "Satu'li Canteen", ts: "Tiffins Restaurant", snack: "Nomad Lounge Outdoor Veranda" },
+          character: { qs: "Flame Tree Barbecue", ts: "Tusker House Restaurant (Donald's Safari)", snack: "Tamu Tamu Refreshments (Dole Whip Float)" },
+          quick: { qs: "Satu'li Canteen & Flame Tree Barbecue", ts: "Eight Spoon Cafe (Baked Mac & Cheese)", snack: "Mr. Kamal's (Seasoned Fries)" }
+        }
+      }
+    ];
+
+    const RESORT_DAY_DATA = {
+      type: "resort",
+      name: "Resort Relaxation & Disney Springs",
+      icon: "🌴",
+      standardOpen: "N/A (Rest Day)",
+      schedule: [
+        "09:00 AM — Sleep in and enjoy a relaxed morning at your resort",
+        "10:15 AM — Feature Pool, Waterslide & Poolside lounging",
+        "12:30 PM — Poolside Lunch or Resort Quick Service",
+        "02:30 PM — Afternoon nap or Monorail / Skyliner Resort Hopping",
+        "05:00 PM — Take Disney Bus/Boat to Disney Springs for shopping & live music",
+        "06:30 PM — Dinner at Disney Springs (Chef Art Smith's Homecomin' or The Boathouse)",
+        "08:30 PM — Gideon's Bakehouse cookies & evening stroll"
+      ],
+      dining: {
+        all: { qs: "The Polite Pig (Disney Springs)", ts: "Chef Art Smith's Homecomin' or The Boathouse", snack: "Gideon's Bakehouse (Half-Pound Cookies)" },
+        signature: { qs: "Morimoto Asia Street Food", ts: "Jiko - The Cooking Place (AKL) or Topolino's Terrace", snack: "The Ganachery (Custom S'mores)" },
+        character: { qs: "Contempo Cafe", ts: "'Ohana (Polynesian) or Boma (Animal Kingdom Lodge)", snack: "Pineapple Lanai (Dole Whip)" },
+        quick: { qs: "Chicken Guy! & Earl of Sandwich", ts: "Trader Sam's Grog Grotto", snack: "Everglazed Donuts & Cold Brew" }
+      }
+    };
+
+    const WATER_PARK_DATA = {
+      type: "water",
+      name: "Disney Water Park Day (Typhoon Lagoon / Blizzard Beach)",
+      icon: "🌊",
+      standardOpen: "10:00 AM",
+      earlyEntry: "9:30 AM",
+      schedule: [
+        "09:00 AM — Leave resort for Water Park rope drop",
+        "09:30 AM — Arrive early to claim shaded lounge chairs near the main wave pool",
+        "10:00 AM — Ride headliner body slides & water coasters",
+        "11:30 AM — Float around Castaway Creek / Cross Country Creek Lazy River",
+        "12:30 PM — Quick Service Lunch (Leaning Palms or Lottawatta Lodge)",
+        "02:00 PM — Surf the wave pool & grab mini donuts",
+        "04:00 PM — Return to resort to shower, rest, and freshen up",
+        "06:30 PM — Dinner at your resort or Disney's BoardWalk"
+      ],
+      dining: {
+        all: { qs: "Leaning Palms or Lottawatta Lodge", ts: "Sanaa (AKL) or Trattoria al Forno", snack: "Happy Landings Ice Cream (Sand Pail Sundae)" },
+        signature: { qs: "Typhoon Tilly's", ts: "Jiko or Flying Fish", snack: "Mini Donuts with Dipping Sauce" },
+        character: { qs: "Warming Hut", ts: "Cape May Cafe or Boma", snack: "Beaches & Cream Soda Shop" },
+        quick: { qs: "Leaning Palms", ts: "Hurricane Hanna's Waterside Bar and Grill", snack: "Arctic Expeditions Mini Donuts" }
+      }
+    };
+
+    function getCrowdData(year, month, day) {
+      const date = new Date(year, month, day);
+      const dayOfWeek = date.getDay();
+      let score = 5;
+      let reason = "Typical seasonal attendance";
+
+      if (month === 0) { score = 4; reason = "Post-holiday lull"; if (day <= 4 || (day >= 15 && day <= 19)) { score = 8; reason = "New Year / MLK Jr. Weekend"; } }
+      else if (month === 1) { score = 5; reason = "Moderate winter crowds"; if (day >= 13 && day <= 21) { score = 9; reason = "Presidents' Day & Princess Half Marathon"; } }
+      else if (month === 2) { score = 8; reason = "Spring Break Peak Season"; if (day < 7) { score = 6; reason = "Early March pre-Spring Break"; } }
+      else if (month === 3) { score = 7; reason = "Spring Break & Easter crowds"; if (day > 20) { score = 5; reason = "Late April shoulder season"; } }
+      else if (month === 4) { score = 5; reason = "Mild May crowds"; if (day >= 22 && day <= 26) { score = 8; reason = "Memorial Day Weekend"; } }
+      else if (month === 5) { score = 7; reason = "Summer vacation season"; }
+      else if (month === 6) { score = 7; reason = "Mid-summer crowds"; if (day <= 6) { score = 9; reason = "July 4th Holiday Week"; } }
+      else if (month === 7) { score = 5; reason = "Late summer drop-off"; if (day > 15) { score = 3; reason = "Back-to-school low season"; } }
+      else if (month === 8) { score = 2; reason = "Lowest crowds of the year"; if (day <= 7) { score = 6; reason = "Labor Day Weekend"; } }
+      else if (month === 9) { score = 6; reason = "Fall Break & Halloween events"; if (day >= 9 && day <= 13) { score = 8; reason = "Indigenous Peoples' / Columbus Day Weekend"; } }
+      else if (month === 10) { score = 6; reason = "November Festival & Holiday transition"; if (day >= 21 && day <= 29) { score = 9; reason = "Thanksgiving Week Peak"; } }
+      else if (month === 11) { score = 6; reason = "Early December holiday season"; if (day >= 19) { score = 10; reason = "Christmas & New Year Peak"; } }
+
+      if (dayOfWeek === 6 || dayOfWeek === 1) score = Math.min(10, score + 1);
+      if (dayOfWeek === 2 || dayOfWeek === 3) score = Math.max(1, score - 1);
+
+      let label = "Moderate";
+      let css = "crowd-mod";
+      if (score <= 3) { label = "Low"; css = "crowd-low"; }
+      else if (score >= 9) { label = "Peak"; css = "crowd-peak"; }
+      else if (score >= 7) { label = "High"; css = "crowd-high"; }
+
+      return { score, label, css, reason, date };
+    }
+
+    function renderCalendar() {
+      const month = parseInt(document.getElementById('monthSelect').value);
+      const year = parseInt(document.getElementById('yearSelect').value);
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 0; i < firstDay; i++) {
+        grid.innerHTML += `<div class="h-20 bg-slate-50 rounded-lg border border-transparent"></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const data = getCrowdData(year, month, d);
+        const avgWait = Math.round(20 + data.score * 4.5);
+        const cell = document.createElement('button');
+        cell.className = `h-20 p-2 rounded-lg border text-left flex flex-col justify-between transition hover:scale-105 hover:shadow-md focus:outline-none ${data.css}`;
+        cell.innerHTML = `
+          <div class="flex justify-between items-center w-full">
+            <span class="font-bold text-sm">${d}</span>
+            <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-white/60">${data.score}/10</span>
+          </div>
+          <div class="text-[11px] leading-tight">
+            <div class="font-semibold">${data.label}</div>
+            <div class="opacity-80">~${avgWait}m avg</div>
+          </div>
+        `;
+        cell.onclick = () => showDayDetails(year, month, d, data);
+        grid.appendChild(cell);
+      }
+    }
+
+    function showDayDetails(year, month, day, data) {
+      const detailsBox = document.getElementById('dayDetails');
+      detailsBox.classList.remove('hidden');
+
+      const formattedDate = data.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      document.getElementById('selectedDateTitle').textContent = formattedDate;
+      document.getElementById('selectedDateMeta').textContent = `${data.reason} • Peak wait times occur between 11:30 AM and 3:30 PM`;
+
+      const badge = document.getElementById('selectedCrowdBadge');
+      badge.textContent = `Crowd Level ${data.score}/10 (${data.label})`;
+      badge.className = `px-3 py-1 rounded-full text-xs font-bold border ${data.css}`;
+
+      const waitsGrid = document.getElementById('waitTimesGrid');
+      waitsGrid.innerHTML = '';
+      const multiplier = 0.55 + (data.score * 0.12);
+
+      PARK_DATA.forEach(park => {
+        const card = document.createElement('div');
+        card.className = "p-3 rounded-lg bg-slate-50 border border-slate-200";
+        let ridesHtml = park.headliners.slice(0, 4).map(r => {
+          const wait = Math.round((r.baseWait * multiplier) / 5) * 5;
+          return `<div class="flex justify-between text-xs py-1 border-b border-slate-200/60 last:border-0">
+            <span class="text-slate-700 font-medium">${r.name}</span>
+            <span class="font-bold text-blue-900">${wait} mins</span>
+          </div>`;
+        }).join('');
+
+        card.innerHTML = `
+          <div class="font-bold text-sm text-slate-800 mb-2">${park.icon} ${park.name}</div>
+          ${ridesHtml}
+        `;
+        waitsGrid.appendChild(card);
+      });
+    }
+
+    function buildDayAssignments(totalDays, resortCount, includeWater, enableCharBf, charBfDayNum, charBfParkName) {
+      const assignments = new Array(totalDays).fill(null);
+      const effectiveResort = Math.min(resortCount, totalDays);
+      const effectiveWater = includeWater && (effectiveResort < totalDays) ? 1 : 0;
+      const totalSpecial = effectiveResort + effectiveWater;
+
+      if (enableCharBf && charBfDayNum >= 1 && charBfDayNum <= totalDays) {
+        const targetPark = PARK_DATA.find(p => p.name === charBfParkName) || PARK_DATA[0];
+        assignments[charBfDayNum - 1] = targetPark;
+      }
+
+      if (totalSpecial > 0) {
+        const mid = Math.floor(totalDays / 2);
+        const nonParkIndices = [];
+        
+        if (totalSpecial === 1) {
+          let idx = mid;
+          if (assignments[idx]) idx = (idx + 1) % totalDays;
+          nonParkIndices.push(idx);
+        } else {
+          const startIdx = Math.max(1, mid - Math.floor(totalSpecial / 2));
+          for (let s = 0; s < totalSpecial; s++) {
+            let idx = Math.min(totalDays - 2, startIdx + s);
+            while (assignments[idx] || nonParkIndices.includes(idx)) {
+              idx = (idx + 1) % totalDays;
+            }
+            nonParkIndices.push(idx);
+          }
+        }
+
+        nonParkIndices.forEach((dayIdx, i) => {
+          if (!assignments[dayIdx]) {
+            if (effectiveWater && i === Math.floor(nonParkIndices.length / 2)) {
+              assignments[dayIdx] = WATER_PARK_DATA;
+            } else {
+              assignments[dayIdx] = RESORT_DAY_DATA;
+            }
+          }
+        });
+      }
+
+      let parkCounter = 0;
+      for (let i = 0; i < totalDays; i++) {
+        if (!assignments[i]) {
+          while (enableCharBf && charBfDayNum === (i + 1) && PARK_DATA[parkCounter % PARK_DATA.length].name === charBfParkName) {
+            parkCounter++;
+          }
+          assignments[i] = PARK_DATA[parkCounter % PARK_DATA.length];
+          parkCounter++;
+        }
+      }
+
+      return assignments;
+    }
+
+    window.setDayTrack = function(dayIdx, trackKey) {
+      dayTrackOverrides[dayIdx] = trackKey;
+      generateItinerary();
+    };
+
+    function generateItinerary() {
+      const startInput = document.getElementById('startDate').value;
+      const endInput = document.getElementById('endDate').value;
+      const diningPref = document.getElementById('diningPref').value;
+      const resortKey = document.getElementById('resortProperty').value;
+      const defaultTrack = document.getElementById('defaultTrack').value;
+      const passType = document.getElementById('llPassType').value;
+      const includeResort = document.getElementById('includeResortDays').checked;
+      const resortCount = includeResort ? parseInt(document.getElementById('resortDaysCount').value) : 0;
+      const includeWater = document.getElementById('includeWaterPark').checked;
+
+      const enableCharBf = document.getElementById('enableCharBreakfast').checked;
+      const charBfLocKey = document.getElementById('charBreakfastLoc').value;
+      const charBfDayNum = parseInt(document.getElementById('charBreakfastDay').value);
+
+      const output = document.getElementById('itineraryOutput');
+      output.innerHTML = '';
+      currentItineraryData = [];
+
+      if (!startInput || !endInput || !resortKey) {
+        output.className = "text-center py-12 text-slate-400 font-medium col-span-full";
+        output.innerHTML = `Please select a Start Date, End Date, and Disney Resort above, then click "Generate Master Itinerary".`;
+        return;
+      }
+
+      const start = new Date(startInput + 'T00:00:00');
+      const end = new Date(endInput + 'T00:00:00');
+      if (end < start) {
+        output.className = "col-span-full";
+        output.innerHTML = `<div class="text-red-600 font-semibold p-4 bg-red-50 rounded-lg">End date must be on or after the start date.</div>`;
+        return;
+      }
+
+      output.className = "grid grid-cols-1 lg:grid-cols-2 gap-6";
+
+      const diffDays = Math.min(21, Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1));
+      const resort = RESORT_PROPERTIES[resortKey];
+      
+      const charBfObj = enableCharBf ? CHARACTER_BREAKFASTS[charBfLocKey] : null;
+      let charBfParkName = null;
+      if (charBfObj) {
+        if (charBfObj.park.includes("Animal Kingdom")) charBfParkName = "Disney's Animal Kingdom";
+        else if (charBfObj.park.includes("Magic Kingdom")) charBfParkName = "Magic Kingdom";
+        else if (charBfObj.park.includes("EPCOT")) charBfParkName = "EPCOT";
+        else charBfParkName = "Magic Kingdom";
+      }
+
+      const schedule = buildDayAssignments(diffDays, resortCount, includeWater, enableCharBf, charBfDayNum, charBfParkName);
+      const windowDays = (resortKey === 'offsite') ? '3-Day Off-Site Window' : '7-Day Disney Resort Window (7:00 AM Eastern)';
+
+      const startFormatted = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const endFormatted = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const parkDaysCount = schedule.filter(d => d && d.type === 'park').length;
+      const actualResortCount = schedule.filter(d => d && d.type === 'resort').length;
+      const actualWaterCount = schedule.filter(d => d && d.type === 'water').length;
+
+      const titleText = `${diffDays}-Day Walt Disney World Master Plan (${startFormatted} - ${endFormatted})`;
+      const subtitleText = `Resort: ${resort.name}  |  ${parkDaysCount} Park Days, ${actualResortCount} Mid-Trip Rest Day(s), ${actualWaterCount} Water Park Day(s)`;
+
+      document.getElementById('itineraryHeaderTitle').textContent = titleText;
+      document.getElementById('itinerarySummaryMeta').textContent = subtitleText;
+      currentItineraryMeta = { title: titleText, subtitle: subtitleText };
+
+      for (let i = 0; i < diffDays; i++) {
+        const currentDate = new Date(start);
+        currentDate.setDate(start.getDate() + i);
+        const crowd = getCrowdData(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+        const plan = schedule[i] || PARK_DATA[0];
+        const dining = plan.dining ? plan.dining[diningPref] : PARK_DATA[0].dining.all;
+        const currentDayNumber = i + 1;
+        const isCharacterBreakfastDay = enableCharBf && (currentDayNumber === charBfDayNum) && (plan.type === 'park');
+        const dayCharBf = isCharacterBreakfastDay ? CHARACTER_BREAKFASTS[charBfLocKey] : null;
+
+        const activeTrackKey = dayCharBf ? 'trackC' : (dayTrackOverrides[i] || defaultTrack);
+        const dateStr = currentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+        let transitText = "";
+        let departureTime = "";
+        let trackTitle = "";
+        let strategySummary = "";
+        let prebookList = [];
+        let rollingList = [];
+        let scheduleList = [];
+        let trackToggleHtml = "";
+        let llSectionHtml = "";
+
+        if (plan.type === 'resort') {
+          transitText = "Complimentary resort internal transit or Disney Springs buses.";
+          departureTime = "No early alarm needed — sleep in!";
+          trackTitle = "Mid-Trip Resort Recovery & Disney Springs";
+          strategySummary = "No Lightning Lanes needed today! Recharge your legs mid-trip with pool time, resort dining, and an evening at Disney Springs.";
+          scheduleList = plan.schedule.slice();
+          llSectionHtml = `
+            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+              <div class="font-bold text-emerald-900 mb-1">Mid-Trip Recovery Strategy</div>
+              <p class="text-emerald-800 leading-relaxed">${strategySummary}</p>
+            </div>
+          `;
+        } else if (plan.type === 'water') {
+          transitText = "Disney water park bus transportation or personal vehicle.";
+          departureTime = "Leave resort at 9:00 AM for 9:30 AM Early Entry / 10:00 AM Rope Drop.";
+          trackTitle = "Mid-Trip Water Park Oasis";
+          strategySummary = "No Lightning Lanes required at Disney Water Parks! Arrive 30 mins before open to claim shaded chairs and hit the water coasters first.";
+          scheduleList = plan.schedule.slice();
+          llSectionHtml = `
+            <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-100">
+              <div class="font-bold text-cyan-900 mb-1">Water Park Touring Tip</div>
+              <p class="text-cyan-800 leading-relaxed">${strategySummary}</p>
+            </div>
+          `;
+        } else if (dayCharBf) {
+          transitText = `Direct transport from ${resort.name} to ${dayCharBf.name.includes('Riviera') ? 'Disney\'s Riviera Resort' : plan.name}.`;
+          departureTime = `7:15 AM (Leave resort for ${dayCharBf.time} reservation)`;
+          trackTitle = `Character Breakfast Day: ${dayCharBf.name.split(' (')[0]}`;
+          strategySummary = `Character Breakfast Morning: Skipping rope-drop entirely. Enjoy a leisurely character dining experience, then dive into your pre-booked afternoon Lightning Lanes starting at 11:30 AM.`;
+          
+          const trackObj = plan.tracks['trackA'];
+          prebookList = trackObj.llPrebook.slice();
+          rollingList = trackObj.llRolling.slice();
+
+          scheduleList = [
+            `07:15 AM — Depart ${resort.name} for Character Breakfast reservation`,
+            `08:00 AM — Character Breakfast Experience at ${dayCharBf.name.split(' (')[0]} (${dayCharBf.desc})`,
+            `09:30 AM — Finish breakfast, take photos & stroll into ${plan.name}`,
+            `10:00 AM — Explore leisurely or ride standby for walk-on attractions`,
+            `11:30 AM — Tap into Pre-Booked Multi Pass #1 -> Book Rolling LL #4`,
+            `12:30 PM — Quick Service Lunch or Snack`,
+            `01:30 PM — Mid-Day Resort Break, Pool & Nap`,
+            `04:30 PM — Return to park for evening headliners, Single Pass & Fireworks`
+          ];
+
+          llSectionHtml = `
+            <div class="bg-amber-50 p-3.5 rounded-lg border border-amber-200 space-y-2.5">
+              <div>
+                <div class="font-bold text-amber-950 text-xs">Character Breakfast Reservation: ${dayCharBf.name}</div>
+                <p class="text-amber-900 text-[11px] leading-relaxed mt-0.5">${strategySummary}</p>
+              </div>
+              <div class="bg-white/90 p-2.5 rounded border border-amber-200">
+                <div class="font-bold text-amber-950 text-[11px] uppercase tracking-wide mb-1">1. Initial 3 Advance Selections (Pre-Book at 7:00 AM):</div>
+                <ul class="text-slate-700 space-y-0.5 text-[11px]">
+                  ${prebookList.map(p => `<li>• ${p}</li>`).join('')}
+                </ul>
+              </div>
+              <div class="bg-indigo-950 text-indigo-50 p-2.5 rounded border border-indigo-800">
+                <div class="font-bold text-amber-300 text-[11px] uppercase tracking-wide mb-1">2. Same-Day Rolling Rebooks (4th, 5th & 6th+ Picks):</div>
+                <ul class="space-y-1 text-[11px] text-indigo-100">
+                  ${rollingList.map(r => `<li>• ${r}</li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          `;
+        } else {
+          if (plan.name === "Magic Kingdom") transitText = resort.mkTransit;
+          else if (plan.name === "EPCOT") transitText = resort.epTransit;
+          else if (plan.name === "Disney's Hollywood Studios") transitText = resort.hsTransit;
+          else transitText = resort.akTransit;
+
+          if (activeTrackKey === 'trackC') {
+            departureTime = "9:15 AM (Leisurely morning departure, arrive at turnstiles by 10:00 AM)";
+          } else if (plan.name === "Disney's Animal Kingdom") {
+            departureTime = "6:30 AM (Arrive at turnstiles by 7:00 AM for 7:30 AM Early Entry)";
+          } else {
+            departureTime = "7:15 AM (Arrive at turnstiles by 7:45 AM for 8:30 AM Early Entry)";
+          }
+
+          const trackObj = plan.tracks[activeTrackKey];
+          trackTitle = trackObj.label;
+          scheduleList = trackObj.schedule.slice();
+
+          trackToggleHtml = `
+            <div class="flex gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200 no-print">
+              <button onclick="setDayTrack(${i}, 'trackA')" class="flex-1 py-1 px-2 rounded-md text-[11px] font-bold transition ${activeTrackKey === 'trackA' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}">
+                Track A (Classic)
+              </button>
+              <button onclick="setDayTrack(${i}, 'trackB')" class="flex-1 py-1 px-2 rounded-md text-[11px] font-bold transition ${activeTrackKey === 'trackB' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}">
+                Track B (Sell-Out Risk)
+              </button>
+              <button onclick="setDayTrack(${i}, 'trackC')" class="flex-1 py-1 px-2 rounded-md text-[11px] font-bold transition ${activeTrackKey === 'trackC' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}">
+                Track C (Sleep In)
+              </button>
+            </div>
+          `;
+
+          if (passType === 'premier') {
+            strategySummary = `Premier Pass Active: Walk up to any Lightning Lane entrance once per ride all day without booking return windows. (${trackObj.summary})`;
+            prebookList = ["Premier Pass covers all Multi Pass & Single Pass attractions automatically."];
+            rollingList = ["Use your Premier Pass on high-wait afternoon headliners when returning from your 1:00 PM resort break."];
+          } else if (passType === 'none') {
+            strategySummary = `Standby / Rope Drop Only: Rely on your ${trackObj.label} morning blitz and post-fireworks queues to minimize waits.`;
+            prebookList = ["No advance paid Lightning Lanes selected."];
+            rollingList = ["Monitor the My Disney Experience tip board after 5:00 PM for dipped standby waits during dinner hours."];
+          } else {
+            strategySummary = `${windowDays} • ${trackObj.summary}`;
+            prebookList = trackObj.llPrebook.slice();
+            rollingList = trackObj.llRolling.slice();
+          }
+
+          llSectionHtml = `
+            <div class="bg-blue-50 p-3.5 rounded-lg border border-blue-200 space-y-2.5">
+              <div>
+                <div class="font-bold text-blue-950 text-xs">${trackTitle}</div>
+                <p class="text-blue-900 text-[11px] leading-relaxed mt-0.5">${strategySummary}</p>
+              </div>
+              <div class="bg-white/80 p-2.5 rounded border border-blue-100">
+                <div class="font-bold text-blue-900 text-[11px] uppercase tracking-wide mb-1">1. Initial 3 Advance Selections (Pre-Book at 7:00 AM):</div>
+                <ul class="text-slate-700 space-y-0.5 text-[11px]">
+                  ${prebookList.map(p => `<li>• ${p}</li>`).join('')}
+                </ul>
+              </div>
+              <div class="bg-indigo-950 text-indigo-50 p-2.5 rounded border border-indigo-800">
+                <div class="font-bold text-amber-300 text-[11px] uppercase tracking-wide mb-1">2. Same-Day Rolling Rebooks (4th, 5th & 6th+ Picks):</div>
+                <ul class="space-y-1 text-[11px] text-indigo-100">
+                  ${rollingList.map(r => `<li>• ${r}</li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          `;
+        }
+
+        currentItineraryData.push({
+          dayNumber: i + 1,
+          dateStr,
+          parkName: plan.name,
+          planType: plan.type,
+          trackTitle,
+          crowdScore: crowd.score,
+          crowdLabel: crowd.label,
+          resortName: resort.name,
+          departureTime,
+          transitText,
+          strategySummary,
+          prebookList,
+          rollingList,
+          dining,
+          scheduleList
+        });
+
+        let departureHtml = plan.type === 'park' ? `
+          <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 text-purple-900 space-y-1 text-xs">
+            <div><strong>Rope Drop Departure (${resort.name}):</strong> Leave at <strong>${departureTime}</strong>.</div>
+            <div class="text-[11px] opacity-90"><strong>Transit Route:</strong> ${transitText}</div>
+          </div>
+        ` : `
+          <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 text-purple-900 text-xs">
+            <div><strong>Schedule & Transit:</strong> ${departureTime} (${transitText})</div>
+          </div>
+        `;
+
+        const dayCard = document.createElement('div');
+        dayCard.className = "day-card bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-3";
+        dayCard.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex justify-between items-start border-b border-slate-100 pb-2.5">
+              <div>
+                <span class="text-xs font-bold uppercase text-blue-600">Day ${i + 1} • ${dateStr}</span>
+                <h3 class="text-lg font-bold text-slate-800 mt-0.5">${plan.icon} ${plan.name}</h3>
+              </div>
+              <span class="px-2.5 py-1 rounded text-xs font-bold border shrink-0 ${crowd.css}">Crowd ${crowd.score}/10</span>
+            </div>
+
+            ${trackToggleHtml}
+
+            <div class="text-xs space-y-3">
+              ${departureHtml}
+              ${llSectionHtml}
+
+              <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                <div class="font-bold text-amber-900 mb-1">Recommended Dining</div>
+                <ul class="text-amber-900 space-y-1">
+                  <li><strong>Table Service:</strong> ${dayCharBf ? dayCharBf.name : dining.ts}</li>
+                  <li><strong>Quick Service:</strong> ${dining.qs}</li>
+                  <li><strong>Must-Try Snack:</strong> ${dining.snack}</li>
+                </ul>
+              </div>
+
+              <div>
+                <div class="font-bold text-slate-700 mb-1.5">Step-by-Step Timed Schedule (With Mid-Day Resort Break)</div>
+                <ul class="space-y-1 text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+                  ${scheduleList.map(item => `<li>• ${item}</li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          </div>
+        `;
+        output.appendChild(dayCard);
+      }
+    }
+
+    // Direct Rich-Text HTML Table Copier for Seamless Google Sheets Paste
+    function exportItineraryToCSV() {
+      if (!currentItineraryData.length) return;
+
+      let html = `<table border="1">
+        <thead>
+          <tr style="background:#1e3a8a; color:white; font-weight:bold;">
+            <th>Day</th><th>Date</th><th>Park / Activity</th><th>Selected Track</th><th>Crowd Level</th>
+            <th>Resort</th><th>Departure Time</th><th>Transit Route</th><th>Initial 3 Lightning Lanes</th>
+            <th>Rolling Rebooks</th><th>Table Service</th><th>Quick Service</th><th>Snack</th><th>Timed Schedule</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      currentItineraryData.forEach(item => {
+        const prebookStr = item.prebookList.length ? item.prebookList.join(" | ") : "N/A";
+        const rollingStr = item.rollingList.length ? item.rollingList.join(" | ") : "N/A";
+        const schedStr = item.scheduleList.join(" | ");
+
+        html += `<tr>
+          <td>${item.dayNumber}</td>
+          <td>${item.dateStr}</td>
+          <td>${item.parkName}</td>
+          <td>${item.trackTitle}</td>
+          <td>${item.crowdScore}/10 - ${item.crowdLabel}</td>
+          <td>${item.resortName}</td>
+          <td>${item.departureTime}</td>
+          <td>${item.transitText}</td>
+          <td>${prebookStr}</td>
+          <td>${rollingStr}</td>
+          <td>${item.dining.ts}</td>
+          <td>${item.dining.qs}</td>
+          <td>${item.dining.snack}</td>
+          <td>${schedStr}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+
+      try {
+        const blob = new Blob([html], { type: 'text/html' });
+        const plainText = currentItineraryData.map(i => `${i.dayNumber}\t${i.dateStr}\t${i.parkName}`).join('\n');
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+        
+        const data = [new ClipboardItem({ 'text/html': blob, 'text/plain': textBlob })];
+        navigator.clipboard.write(data).then(() => {
+          alert("Copied nicely to clipboard! Open Google Sheets, select cell A1, and press Ctrl+V (or Cmd+V).");
+        });
+      } catch (err) {
+        console.error('Clipboard write failed:', err);
+        alert("Clipboard write blocked by browser security. Please use Print View or Download Clean PDF instead.");
+      }
+    }
+
+    function exportItineraryToPDF() {
+      if (!currentItineraryData.length) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+
+      doc.setFillColor(30, 58, 138);
+      doc.rect(0, 0, 792, 68, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text(currentItineraryMeta.title, 36, 28);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(191, 219, 254);
+      doc.text(currentItineraryMeta.subtitle, 36, 46);
+
+      const tableRows = currentItineraryData.map(item => {
+        const dayCol = `DAY ${item.dayNumber}\n${item.dateStr}\n\n${item.parkName}\n(Crowd: ${item.crowdScore}/10)\n\nTrack:\n${item.trackTitle}`;
+        const transitAndDiningCol = `DEPARTURE:\n${item.departureTime}\n\nTRANSIT:\n${item.transitText}\n\nDINING:\n- TS: ${item.dining.ts}\n- QS: ${item.dining.qs}\n- Snack: ${item.dining.snack}`;
+        
+        let llCol = item.strategySummary;
+        if (item.prebookList.length) {
+          llCol = `INITIAL 3 PRE-BOOKS:\n` + item.prebookList.map(p => `• ${p}`).join('\n') +
+                  `\n\nROLLING 4th+ REBOOKS:\n` + item.rollingList.map(r => `• ${r}`).join('\n');
+        }
+
+        const schedCol = item.scheduleList.map(s => `• ${s}`).join('\n');
+
+        return [dayCol, transitAndDiningCol, llCol, schedCol];
+      });
+
+      doc.autoTable({
+        startY: 80,
+        margin: { left: 30, right: 30, bottom: 32 },
+        head: [['Day, Park & Track', 'Transit & Dining', 'Initial 3 + Rolling 4th+ LL Plan', 'Step-by-Step Timed Schedule']],
+        body: tableRows,
+        theme: 'grid',
+        rowPageBreak: 'avoid',
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 9, cellPadding: 6 },
+        bodyStyles: { fontSize: 7.5, textColor: [30, 41, 59], cellPadding: 6, valign: 'top', lineColor: [203, 213, 225], lineWidth: 0.5 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 115, fontStyle: 'bold', fillColor: [241, 245, 249] },
+          1: { cellWidth: 155 },
+          2: { cellWidth: 220 },
+          3: { cellWidth: 242 }
+        },
+        didDrawPage: function (data) {
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(`Walt Disney World Master Itinerary  •  Page ${data.pageNumber} of ${pageCount}`, 30, doc.internal.pageSize.height - 14);
+        }
+      });
+
+      doc.save('Walt-Disney-World-Master-Itinerary.pdf');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      document.getElementById('monthSelect').value = now.getMonth();
+      document.getElementById('yearSelect').value = now.getFullYear();
+
+      document.getElementById('includeResortDays').addEventListener('change', (e) => {
+        const wrapper = document.getElementById('resortCountWrapper');
+        wrapper.style.display = e.target.checked ? 'flex' : 'none';
+      });
+
+      document.getElementById('enableCharBreakfast').addEventListener('change', (e) => {
+        const wrapper = document.getElementById('charBreakfastWrapper');
+        wrapper.style.display = e.target.checked ? 'block' : 'none';
+      });
+
+      document.getElementById('defaultTrack').addEventListener('change', () => {
+        dayTrackOverrides = {};
+      });
+
+      document.getElementById('monthSelect').addEventListener('change', renderCalendar);
+      document.getElementById('yearSelect').addEventListener('change', renderCalendar);
+      document.getElementById('generateBtn').addEventListener('click', generateItinerary);
+      document.getElementById('exportPdfBtn').addEventListener('click', exportItineraryToPDF);
+      document.getElementById('exportCsvBtn').addEventListener('click', exportItineraryToCSV);
+
+      renderCalendar();
+      showDayDetails(now.getFullYear(), now.getMonth(), now.getDate(), getCrowdData(now.getFullYear(), now.getMonth(), now.getDate()));
+    });
+  </script>
+</body>
+</html>
